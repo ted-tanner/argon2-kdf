@@ -1,0 +1,12 @@
+[package]
+name = "argon2-kdf"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+base64 = "0.13"
+rand = "0.8"
+
+[build-dependencies]
+bindgen = "0.63"
+cc = { version = "1.0", features = ["parallel"] }
