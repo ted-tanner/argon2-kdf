@@ -2,6 +2,10 @@
 name = "argon2-kdf"
 version = "1.0.0"
 edition = "2021"
+readme = "Readme.md"
+categories = ["cryptography"]
+documentation = "https://docs.rs/argon2-kdf/latest/argon2-kdf"
+repository = "https://github.com/ted-tanner/argon2-kdf"
 
 [dependencies]
 base64 = "0.13"
