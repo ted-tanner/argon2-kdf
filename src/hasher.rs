@@ -237,7 +237,7 @@ impl<'a> Hasher<'a> {
     /// This is an expensive operation. For some appliations, it might make sense to move this
     /// operation to a separate thread using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
-    pub fn hash(self, password: &str) -> Result<Hash, Argon2Error> {
+    pub fn hash(self, password: &[u8]) -> Result<Hash, Argon2Error> {
         let hash_len_usize = match usize::try_from(self.hash_len) {
             Ok(l) => l,
             Err(_) => return Err(Argon2Error::InvalidParameter("Hash length is too big")),
@@ -305,7 +305,7 @@ impl<'a> Hasher<'a> {
             out: hash_buffer.as_mut_ptr(),
             // hash_len was originally converted from a u32 to a usize, so this is safe
             outlen: self.hash_len,
-            pwd: password.as_bytes() as *const _ as *mut _,
+            pwd: password as *const _ as *mut _,
             pwdlen: match password.len().try_into() {
                 Ok(l) => l,
                 Err(_) => return Err(Argon2Error::InvalidParameter("Password is too long")),
@@ -464,7 +464,7 @@ impl Hash {
     /// using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
     #[inline]
-    pub fn verify(&self, password: &str) -> bool {
+    pub fn verify(&self, password: &[u8]) -> bool {
         self.verify_with_or_without_secret(password, None)
     }
 
@@ -475,11 +475,11 @@ impl Hash {
     /// using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
     #[inline]
-    pub fn verify_with_secret(&self, password: &str, secret: Secret) -> bool {
+    pub fn verify_with_secret(&self, password: &[u8], secret: Secret) -> bool {
         self.verify_with_or_without_secret(password, Some(secret))
     }
 
-    fn verify_with_or_without_secret(&self, password: &str, secret: Option<Secret>) -> bool {
+    fn verify_with_or_without_secret(&self, password: &[u8], secret: Option<Secret>) -> bool {
         let hash_length: u32 = match self.hash.len().try_into() {
             Ok(l) => l,
             Err(_) => return false,
@@ -734,7 +734,7 @@ mod tests {
 
     #[test]
     fn test_hash_auth_string_argon2d() {
-        let auth_string = "@Pa$$20rd-Test";
+        let auth_string = b"@Pa$$20rd-Test";
 
         let key = [1u8; 32];
         let hash_builder = Hasher::default()
@@ -748,7 +748,6 @@ mod tests {
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
-        assert!(!hash.contains(auth_string));
         assert!(Hash::from_str(&hash)
             .unwrap()
             .verify_with_secret(auth_string, Secret::using_bytes(&key)));
@@ -756,7 +755,7 @@ mod tests {
 
     #[test]
     fn test_hash_auth_string_no_secret() {
-        let auth_string = "@Pa$$20rd-Test";
+        let auth_string = b"@Pa$$20rd-Test";
 
         let hash = Hasher::default()
             .salt_length(16)
@@ -768,13 +767,12 @@ mod tests {
             .unwrap()
             .to_string();
 
-        assert!(!hash.contains(auth_string));
         assert!(Hash::from_str(&hash).unwrap().verify(auth_string));
     }
 
     #[test]
     fn test_hash_auth_string_argon2i() {
-        let auth_string = "@Pa$$20rd-Test";
+        let auth_string = b"@Pa$$20rd-Test";
 
         let key = [1u8; 32];
         let hash_builder = Hasher::default()
@@ -788,7 +786,6 @@ mod tests {
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
-        assert!(!hash.contains(auth_string));
         assert!(Hash::from_str(&hash)
             .unwrap()
             .verify_with_secret(auth_string, Secret::using_bytes(&key)));
@@ -796,7 +793,7 @@ mod tests {
 
     #[test]
     fn test_hash_auth_string_argon2id() {
-        let auth_string = "@Pa$$20rd-Test";
+        let auth_string = b"@Pa$$20rd-Test";
 
         let key = [1u8; 32];
         let hash_builder = Hasher::new()
@@ -810,7 +807,6 @@ mod tests {
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
-        assert!(!hash.contains(auth_string));
         assert!(Hash::from_str(&hash)
             .unwrap()
             .verify_with_secret(auth_string, Secret::using_bytes(&key)));
@@ -818,7 +814,7 @@ mod tests {
 
     #[test]
     fn test_custom_salt() {
-        let auth_string = "@Pa$$20rd-Test";
+        let auth_string = b"@Pa$$20rd-Test";
         let salt = b"seasalts";
 
         let hash = Hasher::default()
@@ -830,13 +826,12 @@ mod tests {
 
         let hash_string = hash.to_string();
 
-        assert!(!hash_string.contains(auth_string));
         assert!(Hash::from_str(&hash_string).unwrap().verify(auth_string));
     }
 
     #[test]
     fn test_verify_hash() {
-        let auth_string = "@Pa$$20rd-Test";
+        let auth_string = b"@Pa$$20rd-Test";
 
         let key = [0u8; 32];
         let hash_builder = Hasher::default()
@@ -856,7 +851,7 @@ mod tests {
 
     #[test]
     fn test_verify_incorrect_auth_string() {
-        let auth_string = "@Pa$$20rd-Test";
+        let auth_string = b"@Pa$$20rd-Test";
 
         let key = [0u8; 32];
         let hash_builder = Hasher::default()
@@ -876,7 +871,7 @@ mod tests {
 
     #[test]
     fn test_verify_incorrect_key() {
-        let auth_string = "@Pa$$20rd-Test";
+        let auth_string = b"@Pa$$20rd-Test";
 
         let key = [0u8; 32];
         let hash_builder = Hasher::default()
