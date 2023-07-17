@@ -1,6 +1,8 @@
 use crate::error::Argon2Error;
 use crate::lexer::TokenizedHash;
 
+use base64::engine::general_purpose::STANDARD_NO_PAD as b64_stdnopad;
+use base64::Engine;
 use rand::{rngs::OsRng, Fill};
 use std::default::Default;
 use std::ffi::CStr;
@@ -377,8 +379,8 @@ impl ToString for Hash {
     ///
     /// _$argon2id$v=19$m=62500,t=18,p=2$AQIDBAUGBwg$ypJ3pKxN4aWGkwMv0TOb08OIzwrfK1SZWy64vyTLKo8_
     fn to_string(&self) -> String {
-        let b64_salt = base64::encode_config(&self.salt, base64::STANDARD_NO_PAD);
-        let b64_hash = base64::encode_config(&self.hash, base64::STANDARD_NO_PAD);
+        let b64_salt = b64_stdnopad.encode(&self.salt);
+        let b64_hash = b64_stdnopad.encode(&self.hash);
 
         let alg = match self.alg {
             Algorithm::Argon2d => "d",
@@ -415,25 +417,23 @@ impl FromStr for Hash {
             return Err(Argon2Error::InvalidHash("Hash version is unsupported"));
         }
 
-        let decoded_salt =
-            match base64::decode_config(tokenized_hash.b64_salt, base64::STANDARD_NO_PAD) {
-                Ok(s) => s,
-                Err(_) => {
-                    return Err(Argon2Error::InvalidHash(
-                        "Invalid character in base64-encoded salt",
-                    ))
-                }
-            };
+        let decoded_salt = match b64_stdnopad.decode(tokenized_hash.b64_salt) {
+            Ok(s) => s,
+            Err(_) => {
+                return Err(Argon2Error::InvalidHash(
+                    "Invalid character in base64-encoded salt",
+                ))
+            }
+        };
 
-        let decoded_hash =
-            match base64::decode_config(tokenized_hash.b64_hash, base64::STANDARD_NO_PAD) {
-                Ok(h) => h,
-                Err(_) => {
-                    return Err(Argon2Error::InvalidHash(
-                        "Invalid character in base64-encoded hash",
-                    ))
-                }
-            };
+        let decoded_hash = match b64_stdnopad.decode(tokenized_hash.b64_hash) {
+            Ok(h) => h,
+            Err(_) => {
+                return Err(Argon2Error::InvalidHash(
+                    "Invalid character in base64-encoded hash",
+                ))
+            }
+        };
 
         Ok(Self {
             alg: tokenized_hash.alg,
@@ -532,12 +532,10 @@ mod tests {
             iterations: 3,
             threads: 2,
             salt: vec![1, 2, 3, 4, 5, 6, 7, 8],
-            hash: base64::decode_config(
-                "ypJ3pKxN4aWGkwMv0TOb08OIzwrfK1SZWy64vyTLKo8",
-                base64::STANDARD_NO_PAD,
-            )
-            .unwrap()
-            .to_vec(),
+            hash: b64_stdnopad
+                .decode("ypJ3pKxN4aWGkwMv0TOb08OIzwrfK1SZWy64vyTLKo8")
+                .unwrap()
+                .to_vec(),
         };
 
         assert_eq!(
@@ -558,17 +556,12 @@ mod tests {
         assert_eq!(hash.mem_cost_kib, 128);
         assert_eq!(hash.iterations, 3);
         assert_eq!(hash.threads, 2);
-        assert_eq!(
-            hash.salt,
-            base64::decode_config("AQIDBAUGBwg", base64::STANDARD_NO_PAD).unwrap()
-        );
+        assert_eq!(hash.salt, b64_stdnopad.decode("AQIDBAUGBwg").unwrap());
         assert_eq!(
             hash.hash,
-            base64::decode_config(
-                "7OU7S/azjYpnXXySR52cFWeisxk1VVjNeXqtQ8ZM/Oc",
-                base64::STANDARD_NO_PAD
-            )
-            .unwrap()
+            b64_stdnopad
+                .decode("7OU7S/azjYpnXXySR52cFWeisxk1VVjNeXqtQ8ZM/Oc",)
+                .unwrap()
         );
 
         let hash = Hash::from_str(
@@ -579,17 +572,12 @@ mod tests {
         assert_eq!(hash.mem_cost_kib, 128);
         assert_eq!(hash.iterations, 3);
         assert_eq!(hash.threads, 2);
-        assert_eq!(
-            hash.salt,
-            base64::decode_config("AQIDBAUGBwg", base64::STANDARD_NO_PAD).unwrap()
-        );
+        assert_eq!(hash.salt, b64_stdnopad.decode("AQIDBAUGBwg").unwrap());
         assert_eq!(
             hash.hash,
-            base64::decode_config(
-                "7OU7S/azjYpnXXySR52cFWeisxk1VVjNeXqtQ8ZM/Oc",
-                base64::STANDARD_NO_PAD
-            )
-            .unwrap()
+            b64_stdnopad
+                .decode("7OU7S/azjYpnXXySR52cFWeisxk1VVjNeXqtQ8ZM/Oc",)
+                .unwrap()
         );
 
         let hash = Hash::from_str(
@@ -600,17 +588,12 @@ mod tests {
         assert_eq!(hash.mem_cost_kib, 128);
         assert_eq!(hash.iterations, 3);
         assert_eq!(hash.threads, 2);
-        assert_eq!(
-            hash.salt,
-            base64::decode_config("AQIDBAUGBwg", base64::STANDARD_NO_PAD).unwrap()
-        );
+        assert_eq!(hash.salt, b64_stdnopad.decode("AQIDBAUGBwg").unwrap());
         assert_eq!(
             hash.hash,
-            base64::decode_config(
-                "7OU7S/azjYpnXXySR52cFWeisxk1VVjNeXqtQ8ZM/Oc",
-                base64::STANDARD_NO_PAD
-            )
-            .unwrap()
+            b64_stdnopad
+                .decode("7OU7S/azjYpnXXySR52cFWeisxk1VVjNeXqtQ8ZM/Oc",)
+                .unwrap()
         );
 
         let hash = Hash::from_str(
@@ -621,17 +604,12 @@ mod tests {
         assert_eq!(hash.mem_cost_kib, 128);
         assert_eq!(hash.iterations, 3);
         assert_eq!(hash.threads, 2);
-        assert_eq!(
-            hash.salt,
-            base64::decode_config("AQIDBAUGBwg", base64::STANDARD_NO_PAD).unwrap()
-        );
+        assert_eq!(hash.salt, b64_stdnopad.decode("AQIDBAUGBwg").unwrap());
         assert_eq!(
             hash.hash,
-            base64::decode_config(
-                "7OU7S/azjYpnXXySR52cFWeisxk1VVjNeXqtQ8ZM/Oc",
-                base64::STANDARD_NO_PAD
-            )
-            .unwrap()
+            b64_stdnopad
+                .decode("7OU7S/azjYpnXXySR52cFWeisxk1VVjNeXqtQ8ZM/Oc",)
+                .unwrap()
         );
     }
 
