@@ -305,16 +305,14 @@ impl<'a> Hasher<'a> {
             Vec::from(s)
         } else {
             let mut rand_salt = MaybeUninit::new(Vec::with_capacity(salt_len_usize));
-            let salt = unsafe {
+            unsafe {
                 (*rand_salt.as_mut_ptr()).set_len(salt_len_usize);
                 (*rand_salt.as_mut_ptr())
                     .try_fill(&mut OsRng)
                     .expect("Failed to fill buffer with random bytes");
 
                 rand_salt.assume_init()
-            };
-
-            salt
+            }
         };
 
         let (secret_ptr, secret_len) = {
@@ -481,6 +479,26 @@ impl Hash {
     /// Returns a reference to a byte slice of the salt used to generate the hash.
     pub fn salt_bytes(&self) -> &[u8] {
         &self.salt
+    }
+
+    /// Returns the algorithm used to generate the hash.
+    pub fn algorithm(&self) -> Algorithm {
+        self.alg
+    }
+
+    /// Returns the memory cost used to generate the hash.
+    pub fn memory_cost_kib(&self) -> u32 {
+        self.mem_cost_kib
+    }
+
+    /// Returns the number of iterations used to generate the hash.
+    pub fn iterations(&self) -> u32 {
+        self.iterations
+    }
+
+    /// Returns the number of threads used to generate the hash.
+    pub fn threads(&self) -> u32 {
+        self.threads
     }
 
     /// Checks if the hash matches the provided password.
@@ -744,8 +762,8 @@ mod tests {
             .algorithm(Algorithm::Argon2d)
             .salt_length(16)
             .hash_length(32)
-            .iterations(2)
-            .memory_cost_kib(128)
+            .iterations(1)
+            .memory_cost_kib(16)
             .threads(1)
             .secret((&key).into());
 
@@ -763,8 +781,8 @@ mod tests {
         let hash = Hasher::default()
             .salt_length(16)
             .hash_length(32)
-            .iterations(2)
-            .memory_cost_kib(128)
+            .iterations(1)
+            .memory_cost_kib(16)
             .threads(1)
             .hash(auth_string)
             .unwrap()
@@ -782,8 +800,8 @@ mod tests {
             .algorithm(Algorithm::Argon2i)
             .salt_length(16)
             .hash_length(32)
-            .iterations(2)
-            .memory_cost_kib(128)
+            .iterations(1)
+            .memory_cost_kib(16)
             .threads(1)
             .secret((&key).into());
 
@@ -803,8 +821,8 @@ mod tests {
             .algorithm(Algorithm::Argon2id)
             .salt_length(16)
             .hash_length(32)
-            .iterations(2)
-            .memory_cost_kib(128)
+            .iterations(1)
+            .memory_cost_kib(16)
             .threads(1)
             .secret((&key).into());
 
@@ -813,6 +831,32 @@ mod tests {
         assert!(Hash::from_str(&hash)
             .unwrap()
             .verify_with_secret(auth_string, (&key).into()));
+    }
+
+    #[test]
+    fn test_get_fields() {
+        let auth_string = b"@Pa$$20rd-Test";
+        let salt = b"seasalts";
+
+        let hash_builder = Hasher::new()
+            .algorithm(Algorithm::Argon2d)
+            .custom_salt(salt)
+            .hash_length(32)
+            .iterations(1)
+            .memory_cost_kib(16)
+            .threads(1);
+
+        let hash = hash_builder.hash(auth_string).unwrap().to_string();
+        let hash = Hash::from_str(&hash).unwrap();
+
+        assert!(hash.verify(auth_string));
+
+        assert!(matches!(hash.algorithm(), Algorithm::Argon2d));
+        assert_eq!(hash.salt_bytes(), salt);
+        assert_eq!(hash.as_bytes().len(), 32);
+        assert_eq!(hash.iterations(), 1);
+        assert_eq!(hash.memory_cost_kib(), 16);
+        assert_eq!(hash.threads(), 1);
     }
 
     #[test]
@@ -840,8 +884,8 @@ mod tests {
         let hash_builder = Hasher::default()
             .salt_length(16)
             .hash_length(32)
-            .iterations(2)
-            .memory_cost_kib(128)
+            .iterations(1)
+            .memory_cost_kib(16)
             .threads(1)
             .secret((&key).into());
 
@@ -860,8 +904,8 @@ mod tests {
         let hash_builder = Hasher::default()
             .salt_length(16)
             .hash_length(32)
-            .iterations(2)
-            .memory_cost_kib(128)
+            .iterations(1)
+            .memory_cost_kib(16)
             .threads(1)
             .secret((&key).into());
 
@@ -880,8 +924,8 @@ mod tests {
         let hash_builder = Hasher::default()
             .salt_length(16)
             .hash_length(32)
-            .iterations(2)
-            .memory_cost_kib(128)
+            .iterations(1)
+            .memory_cost_kib(16)
             .threads(1)
             .secret((&key).into());
 

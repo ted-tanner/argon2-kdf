@@ -1,6 +1,6 @@
 [package]
 name = "argon2-kdf"
-version = "1.3.0"
+version = "1.4.0"
 edition = "2021"
 readme = "Readme.md"
 license = "MIT"
@@ -14,5 +14,5 @@ base64 = "0.21.*"
 rand = "0.8.*"
 
 [build-dependencies]
-bindgen = "0.66.*"
+bindgen = "0.68.*"
 cc = { version = "1.0.*", features = ["parallel"] }
