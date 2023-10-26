@@ -20,7 +20,7 @@ fn main() {
 
     let mut builder = cc::Build::new();
 
-    let build = builder
+    let mut build = builder
         .static_flag(true)
         .files(src.iter())
         .include("phc-winner-argon2-20190702/include")
