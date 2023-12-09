@@ -3,6 +3,7 @@ name = "argon2-kdf"
 version = "1.0.0"
 edition = "2021"
 readme = "Readme.md"
+license = "MIT"
 description = "Intuitive Rust bindings for Argon2"
 categories = ["cryptography"]
 documentation = "https://docs.rs/argon2-kdf/latest/argon2-kdf"
