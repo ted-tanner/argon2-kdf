@@ -46,8 +46,8 @@ pub struct Secret<'a>(&'a [u8]);
 
 impl<'a> Secret<'a> {
     /// Wraps a reference to a slice containing a secret key
-    pub fn using<T: AsRef<[u8]>>(secret: &'a T) -> Self {
-        Self(secret.as_ref())
+    pub fn using(secret: &'a [u8]) -> Self {
+        Self(secret)
     }
 }
 
@@ -66,12 +66,6 @@ impl<'a> From<&'a Vec<u8>> for Secret<'a> {
 impl<'a, const SIZE: usize> From<&'a [u8; SIZE]> for Secret<'a> {
     fn from(secret: &'a [u8; SIZE]) -> Self {
         Self(secret)
-    }
-}
-
-impl<'a> From<&'a dyn AsRef<[u8]>> for Secret<'a> {
-    fn from(secret: &'a dyn AsRef<[u8]>) -> Self {
-        Self(secret.as_ref())
     }
 }
 
@@ -187,11 +181,8 @@ impl<'a> Hasher<'a> {
     /// number generator. In most cases, this function should not be used. Only use this
     /// function if you are trying to generate a hash deterministically with a known salt and
     /// a randomly generated salt will not suffice.
-    pub fn custom_salt<SLT>(mut self, salt: &'a SLT) -> Self
-    where
-        SLT: AsRef<[u8]> + ?Sized,
-    {
-        self.custom_salt = Some(salt.as_ref());
+    pub fn custom_salt(mut self, salt: &'a [u8]) -> Self {
+        self.custom_salt = Some(salt);
         self
     }
 
@@ -278,10 +269,7 @@ impl<'a> Hasher<'a> {
     /// This is an expensive operation. For some appliations, it might make sense to move this
     /// operation to a separate thread using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
-    pub fn hash<P>(self, password: &P) -> Result<Hash, Argon2Error>
-    where
-        P: AsRef<[u8]> + ?Sized,
-    {
+    pub fn hash(self, password: &[u8]) -> Result<Hash, Argon2Error> {
         let hash_len_usize = match usize::try_from(self.hash_len) {
             Ok(l) => l,
             Err(_) => return Err(Argon2Error::InvalidParameter("Hash length is too big")),
@@ -313,12 +301,11 @@ impl<'a> Hasher<'a> {
             (self.salt_len, salt_len_usize)
         };
 
-        let salt;
-        let salt = if let Some(s) = self.custom_salt {
-            s
+        let mut salt = if let Some(s) = self.custom_salt {
+            Vec::from(s)
         } else {
             let mut rand_salt = MaybeUninit::new(Vec::with_capacity(salt_len_usize));
-            salt = unsafe {
+            let salt = unsafe {
                 (*rand_salt.as_mut_ptr()).set_len(salt_len_usize);
                 (*rand_salt.as_mut_ptr())
                     .try_fill(&mut OsRng)
@@ -327,7 +314,7 @@ impl<'a> Hasher<'a> {
                 rand_salt.assume_init()
             };
 
-            &salt
+            salt
         };
 
         let (secret_ptr, secret_len) = {
@@ -337,26 +324,23 @@ impl<'a> Hasher<'a> {
                     Err(_) => return Err(Argon2Error::InvalidParameter("Secret is too long")),
                 };
 
-                (s.0.as_ref().as_ptr() as *mut _, length)
+                (s.0.as_ptr() as *mut _, length)
             } else {
                 (std::ptr::null_mut(), 0)
             }
         };
 
-        // Some buffers here are cast to *mut to pass to C. C will not modify these buffers
-        // so this is safe
+        // Some buffers here are cast to *mut to pass to C. The C code does not modify these
+        // buffers so this is safe
         let mut ctx = Argon2_Context {
             out: hash_buffer.as_mut_ptr(),
-            // hash_len was originally converted from a u32 to a usize, so this is safe
             outlen: self.hash_len,
             pwd: password as *const _ as *mut _,
-            pwdlen: match password.as_ref().len().try_into() {
+            pwdlen: match password.len().try_into() {
                 Ok(l) => l,
                 Err(_) => return Err(Argon2Error::InvalidParameter("Password is too long")),
             },
-            salt: salt.as_ref().as_ptr() as *mut _,
-            // Careful not to use self.salt_len here; it may be overridden if a custom salt
-            // has been specified
+            salt: salt.as_mut_ptr(),
             saltlen: salt_len_u32,
             secret: secret_ptr,
             secretlen: secret_len,
@@ -393,7 +377,7 @@ impl<'a> Hasher<'a> {
             mem_cost_kib: self.mem_cost_kib,
             iterations: self.iterations,
             threads: self.threads,
-            salt: Vec::from(salt),
+            salt,
             hash: hash_buffer,
         })
     }
@@ -505,11 +489,8 @@ impl Hash {
     /// For some appliations, it might make sense to move this operation to a separate thread
     /// using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
-    pub fn verify<P>(&self, password: &P) -> bool
-    where
-        P: AsRef<[u8]> + ?Sized,
-    {
-        self.verify_with_or_without_secret::<P>(password, None)
+    pub fn verify(&self, password: &[u8]) -> bool {
+        self.verify_with_or_without_secret(password, None)
     }
 
     /// Checks if the hash matches the provided password using the provided secret.
@@ -518,18 +499,12 @@ impl Hash {
     /// For some appliations, it might make sense to move this operation to a separate thread
     /// using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
-    pub fn verify_with_secret<P>(&self, password: &P, secret: Secret) -> bool
-    where
-        P: AsRef<[u8]> + ?Sized,
-    {
-        self.verify_with_or_without_secret::<P>(password, Some(secret))
+    pub fn verify_with_secret(&self, password: &[u8], secret: Secret) -> bool {
+        self.verify_with_or_without_secret(password, Some(secret))
     }
 
     #[inline]
-    fn verify_with_or_without_secret<P>(&self, password: &P, secret: Option<Secret>) -> bool
-    where
-        P: AsRef<[u8]> + ?Sized,
-    {
+    fn verify_with_or_without_secret(&self, password: &[u8], secret: Option<Secret>) -> bool {
         let hash_length: u32 = match self.hash.len().try_into() {
             Ok(l) => l,
             Err(_) => return false,

@@ -23,7 +23,7 @@ To use argon2-kdf, add the following to your Cargo.toml:
 
 ```toml
 [dependencies]
-argon2-kdf = "1.2.0"
+argon2-kdf = "1.3.0"
 ```
 
 # Examples
@@ -33,7 +33,7 @@ Hash a password, then verify the hash:
 ```rust
 use argon2_kdf::Hasher;
 
-let password = "password";
+let password = b"password";
 let hash = Hasher::default().hash(password).unwrap();
 assert!(hash.verify(password));
 ```
@@ -43,7 +43,7 @@ Change the parameters used for hashing:
 ```rust
 use argon2_kdf::{Algorithm, Hasher};
 
-let password = "password";
+let password = b"password";
 
 let hash = Hasher::new()
         .algorithm(Algorithm::Argon2id)
@@ -66,7 +66,7 @@ Verify a hash from a hash string:
 use argon2_kdf::{Hash, Hasher};
 use std::str::FromStr;
 
-let password = "password";
+let password = b"password";
 let hash_string = "$argon2id$v=19$m=128,t=2,p=1$VnZ3ZFNhZkc$djHLRc+4K/DqQL0f8DMAQQ";
 
 let hash = Hash::from_str(hash_string).unwrap();
@@ -79,7 +79,7 @@ Generate a hash string:
 use argon2_kdf::{Hash, Hasher};
 use std::str::FromStr;
 
-let password = "password";
+let password = b"password";
 let hash = Hasher::default().hash(password).unwrap();
 
 let hash_string = hash.to_string();
@@ -94,8 +94,8 @@ verification:
 ```rust
 use argon2_kdf::{Hasher, Secret};
 
-let password = "password";
-let secret = "secret";
+let password = b"password";
+let secret = b"secret";
 
 let hash = Hasher::default()
         .secret(secret.into())
@@ -110,8 +110,8 @@ Use your own salt (by default, the hasher will use a secure-random salt):
 ```rust
 use argon2_kdf::Hasher;
 
-let password = "password";
-let salt = "dontusethissalt";
+let password = b"password";
+let salt = b"dontusethissalt";
 
 let hash = Hasher::default()
         .custom_salt(salt)
