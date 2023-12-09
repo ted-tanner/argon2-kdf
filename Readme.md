@@ -23,7 +23,7 @@ To use argon2-kdf, add the following to your Cargo.toml:
 
 ```toml
 [dependencies]
-argon2-kdf = "1.3.0"
+argon2-kdf = "1.4.0"
 ```
 
 # Examples
