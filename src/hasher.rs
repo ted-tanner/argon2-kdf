@@ -2,9 +2,9 @@ use crate::error::Argon2Error;
 use crate::lexer::TokenizedHash;
 
 use rand::{rngs::OsRng, Fill};
+use std::default::Default;
 use std::ffi::CStr;
 use std::mem::MaybeUninit;
-use std::default::Default;
 use std::str::FromStr;
 
 use crate::bindings::{
@@ -49,7 +49,7 @@ impl<'a> Secret<'a> {
     }
 }
 
-/// A builder for a hash. Parameters for hashing, such as 
+/// A builder for a hash. Parameters for hashing, such as
 #[derive(Clone, Debug)]
 pub struct Hasher<'a> {
     alg: Algorithm,
@@ -448,12 +448,12 @@ impl FromStr for Hash {
 
 impl Hash {
     /// Returns a reference to a byte slice of the computed hash/key.
-    pub fn as_bytes<'a>(&'a self) -> &'a [u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         &self.hash
     }
 
     /// Returns a reference to a byte slice of the salt used to generate the hash.
-    pub fn salt<'a>(&'a self) -> &'a [u8] {
+    pub fn salt(&self) -> &[u8] {
         &self.salt
     }
 
@@ -815,7 +815,7 @@ mod tests {
             .unwrap()
             .verify_with_secret(auth_string, Secret::using_bytes(&key)));
     }
-    
+
     #[test]
     fn test_custom_salt() {
         let auth_string = "@Pa$$20rd-Test";

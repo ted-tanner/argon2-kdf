@@ -29,7 +29,7 @@
 //! # Examples
 //!
 //! Hash a password, then verify the hash:
-//! 
+//!
 //! ```rust
 //! use argon2_kdf::Hasher;
 //!
