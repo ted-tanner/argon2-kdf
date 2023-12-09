@@ -1,6 +1,6 @@
 # Deployment Checklist
 
-1. Run `cargo fmt`
+1. Run `cargo fmt` and `cargo clippy`
 2. Run `cargo test --release`
 3. Update version in `Cargo.toml`
 4. Update version in `Readme.md`

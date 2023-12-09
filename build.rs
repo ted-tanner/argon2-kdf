@@ -28,8 +28,8 @@ fn main() {
         .flag("-std=c89")
         .flag("-pthread");
 
-    if let Ok(compiler_flags) = std::env::var("C_COMPILER_FLAGS") {
-        for flag in compiler_flags.split(";").into_iter() {
+    if let Ok(compiler_flags) = std::env::var("ARGON2_KDF_C_COMPILER_FLAGS") {
+        for flag in compiler_flags.split(';') {
             build = build.flag(flag);
         }
     }

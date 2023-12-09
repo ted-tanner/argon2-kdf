@@ -23,12 +23,10 @@ To use argon2-kdf, add the following to your Cargo.toml:
 
 ```toml
 [dependencies]
-argon2-kdf = "1.4.0"
+argon2-kdf = "1.5.0"
 ```
 
-The original C implementation uses AVX to enhance execution speed. If you wish to disable AVX or make other fine adjustments to the compiler, you can set an environment variable containing a list of flags to be passed to the C compiler. This can be particularly useful when building an executable for air-gapped machines that lack support for the same features as the machine where the code is being compiled.
-
-For instance, you can use the following command: `C_COMPILER_FLAGS="-mno-avx512f" cargo build` to disable AVX512F. If you want to pass more than one variable you can split them with `;`: `C_COMPILER_FLAGS="-mno-avx512f;-mno-avx2" cargo build`.
+To pass build flags to the C compiler used to build the Argon2 library, you may add a semicolon-delimited list of flags to the `ARGON2_KDF_C_COMPILER_FLAGS` environment variable. For example, if you wish to disable the AVX optimizations that are on by default, you can do so with the following command: `ARGON2_KDF_C_COMPILER_FLAGS="-mno-avx512f;-mno-avx2" cargo build`.
 
 # Examples
 
