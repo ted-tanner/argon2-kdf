@@ -26,6 +26,10 @@ To use argon2-kdf, add the following to your Cargo.toml:
 argon2-kdf = "1.4.0"
 ```
 
+The original C implementation uses AVX to enhance execution speed. If you wish to disable AVX or make other fine adjustments to the compiler, you can set an environment variable containing a list of flags to be passed to the C compiler. This can be particularly useful when building an executable for air-gapped machines that lack support for the same features as the machine where the code is being compiled.
+
+For instance, you can use the following command: `C_COMPILER_FLAGS="-mno-avx512f" cargo build` to disable AVX512F. If you want to pass more than one variable you can split them with `;`: `C_COMPILER_FLAGS="-mno-avx512f;-mno-avx2" cargo build`.
+
 # Examples
 
 Hash a password, then verify the hash:
