@@ -46,8 +46,44 @@ pub struct Secret<'a>(&'a [u8]);
 
 impl<'a> Secret<'a> {
     /// Wraps a reference to a slice containing a secret key
-    pub fn using_bytes(bytes: &'a [u8]) -> Self {
-        Self(bytes)
+    pub fn using<T: AsRef<[u8]>>(secret: &'a T) -> Self {
+        Self(secret.as_ref())
+    }
+}
+
+impl<'a> From<&'a [u8]> for Secret<'a> {
+    fn from(secret: &'a [u8]) -> Self {
+        Self(secret)
+    }
+}
+
+impl<'a> From<&'a Vec<u8>> for Secret<'a> {
+    fn from(secret: &'a Vec<u8>) -> Self {
+        Self(secret)
+    }
+}
+
+impl<'a, const SIZE: usize> From<&'a [u8; SIZE]> for Secret<'a> {
+    fn from(secret: &'a [u8; SIZE]) -> Self {
+        Self(secret)
+    }
+}
+
+impl<'a> From<&'a dyn AsRef<[u8]>> for Secret<'a> {
+    fn from(secret: &'a dyn AsRef<[u8]>) -> Self {
+        Self(secret.as_ref())
+    }
+}
+
+impl<'a> From<&'a str> for Secret<'a> {
+    fn from(secret: &'a str) -> Self {
+        Self(secret.as_bytes())
+    }
+}
+
+impl<'a> From<&'a String> for Secret<'a> {
+    fn from(secret: &'a String) -> Self {
+        Self(secret.as_bytes())
     }
 }
 
@@ -64,7 +100,7 @@ pub struct Hasher<'a> {
     secret: Option<Secret<'a>>,
 }
 
-impl<'a> Default for Hasher<'a> {
+impl Default for Hasher<'_> {
     /// Create a new `Hasher` with default values.
     ///
     /// This provides some reasonable defaults, but it is recommended that you tinker with
@@ -151,8 +187,11 @@ impl<'a> Hasher<'a> {
     /// number generator. In most cases, this function should not be used. Only use this
     /// function if you are trying to generate a hash deterministically with a known salt and
     /// a randomly generated salt will not suffice.
-    pub fn custom_salt(mut self, salt: &'a [u8]) -> Self {
-        self.custom_salt = Some(salt);
+    pub fn custom_salt<SLT>(mut self, salt: &'a SLT) -> Self
+    where
+        SLT: AsRef<[u8]> + ?Sized,
+    {
+        self.custom_salt = Some(salt.as_ref());
         self
     }
 
@@ -239,7 +278,10 @@ impl<'a> Hasher<'a> {
     /// This is an expensive operation. For some appliations, it might make sense to move this
     /// operation to a separate thread using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
-    pub fn hash(self, password: &[u8]) -> Result<Hash, Argon2Error> {
+    pub fn hash<P>(self, password: &P) -> Result<Hash, Argon2Error>
+    where
+        P: AsRef<[u8]> + ?Sized,
+    {
         let hash_len_usize = match usize::try_from(self.hash_len) {
             Ok(l) => l,
             Err(_) => return Err(Argon2Error::InvalidParameter("Hash length is too big")),
@@ -295,7 +337,7 @@ impl<'a> Hasher<'a> {
                     Err(_) => return Err(Argon2Error::InvalidParameter("Secret is too long")),
                 };
 
-                (s.0.as_ptr() as *mut _, length)
+                (s.0.as_ref().as_ptr() as *mut _, length)
             } else {
                 (std::ptr::null_mut(), 0)
             }
@@ -308,11 +350,11 @@ impl<'a> Hasher<'a> {
             // hash_len was originally converted from a u32 to a usize, so this is safe
             outlen: self.hash_len,
             pwd: password as *const _ as *mut _,
-            pwdlen: match password.len().try_into() {
+            pwdlen: match password.as_ref().len().try_into() {
                 Ok(l) => l,
                 Err(_) => return Err(Argon2Error::InvalidParameter("Password is too long")),
             },
-            salt: salt.as_ptr() as *mut _,
+            salt: salt.as_ref().as_ptr() as *mut _,
             // Careful not to use self.salt_len here; it may be overridden if a custom salt
             // has been specified
             saltlen: salt_len_u32,
@@ -453,7 +495,7 @@ impl Hash {
     }
 
     /// Returns a reference to a byte slice of the salt used to generate the hash.
-    pub fn salt(&self) -> &[u8] {
+    pub fn salt_bytes(&self) -> &[u8] {
         &self.salt
     }
 
@@ -463,9 +505,11 @@ impl Hash {
     /// For some appliations, it might make sense to move this operation to a separate thread
     /// using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
-    #[inline]
-    pub fn verify(&self, password: &[u8]) -> bool {
-        self.verify_with_or_without_secret(password, None)
+    pub fn verify<P>(&self, password: &P) -> bool
+    where
+        P: AsRef<[u8]> + ?Sized,
+    {
+        self.verify_with_or_without_secret::<P>(password, None)
     }
 
     /// Checks if the hash matches the provided password using the provided secret.
@@ -474,12 +518,18 @@ impl Hash {
     /// For some appliations, it might make sense to move this operation to a separate thread
     /// using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
-    #[inline]
-    pub fn verify_with_secret(&self, password: &[u8], secret: Secret) -> bool {
-        self.verify_with_or_without_secret(password, Some(secret))
+    pub fn verify_with_secret<P>(&self, password: &P, secret: Secret) -> bool
+    where
+        P: AsRef<[u8]> + ?Sized,
+    {
+        self.verify_with_or_without_secret::<P>(password, Some(secret))
     }
 
-    fn verify_with_or_without_secret(&self, password: &[u8], secret: Option<Secret>) -> bool {
+    #[inline]
+    fn verify_with_or_without_secret<P>(&self, password: &P, secret: Option<Secret>) -> bool
+    where
+        P: AsRef<[u8]> + ?Sized,
+    {
         let hash_length: u32 = match self.hash.len().try_into() {
             Ok(l) => l,
             Err(_) => return false,
@@ -722,13 +772,13 @@ mod tests {
             .iterations(2)
             .memory_cost_kib(128)
             .threads(1)
-            .secret(Secret::using_bytes(&key));
+            .secret((&key).into());
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
         assert!(Hash::from_str(&hash)
             .unwrap()
-            .verify_with_secret(auth_string, Secret::using_bytes(&key)));
+            .verify_with_secret(auth_string, (&key).into()));
     }
 
     #[test]
@@ -760,13 +810,13 @@ mod tests {
             .iterations(2)
             .memory_cost_kib(128)
             .threads(1)
-            .secret(Secret::using_bytes(&key));
+            .secret((&key).into());
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
         assert!(Hash::from_str(&hash)
             .unwrap()
-            .verify_with_secret(auth_string, Secret::using_bytes(&key)));
+            .verify_with_secret(auth_string, (&key).into()));
     }
 
     #[test]
@@ -781,13 +831,13 @@ mod tests {
             .iterations(2)
             .memory_cost_kib(128)
             .threads(1)
-            .secret(Secret::using_bytes(&key));
+            .secret((&key).into());
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
         assert!(Hash::from_str(&hash)
             .unwrap()
-            .verify_with_secret(auth_string, Secret::using_bytes(&key)));
+            .verify_with_secret(auth_string, (&key).into()));
     }
 
     #[test]
@@ -818,13 +868,13 @@ mod tests {
             .iterations(2)
             .memory_cost_kib(128)
             .threads(1)
-            .secret(Secret::using_bytes(&key));
+            .secret((&key).into());
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
         assert!(Hash::from_str(&hash)
             .unwrap()
-            .verify_with_secret(auth_string, Secret::using_bytes(&key)));
+            .verify_with_secret(auth_string, (&key).into()));
     }
 
     #[test]
@@ -838,13 +888,13 @@ mod tests {
             .iterations(2)
             .memory_cost_kib(128)
             .threads(1)
-            .secret(Secret::using_bytes(&key));
+            .secret((&key).into());
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
         assert!(Hash::from_str(&hash)
             .unwrap()
-            .verify_with_secret(auth_string, Secret::using_bytes(&key)));
+            .verify_with_secret(auth_string, (&key).into()));
     }
 
     #[test]
@@ -858,12 +908,12 @@ mod tests {
             .iterations(2)
             .memory_cost_kib(128)
             .threads(1)
-            .secret(Secret::using_bytes(&key));
+            .secret((&key).into());
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
         assert!(Hash::from_str(&hash)
             .unwrap()
-            .verify_with_secret(auth_string, Secret::using_bytes(&key)));
+            .verify_with_secret(auth_string, (&key).into()));
     }
 }
