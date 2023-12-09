@@ -1,6 +1,6 @@
 [package]
 name = "argon2-kdf"
-version = "1.1.2"
+version = "1.2.0"
 edition = "2021"
 readme = "Readme.md"
 license = "MIT"
@@ -10,9 +10,9 @@ documentation = "https://docs.rs/argon2-kdf/latest/argon2-kdf"
 repository = "https://github.com/ted-tanner/argon2-kdf"
 
 [dependencies]
-base64 = "0.13"
-rand = "0.8"
+base64 = "0.21.*"
+rand = "0.8.*"
 
 [build-dependencies]
-bindgen = "0.63"
-cc = { version = "1.0", features = ["parallel"] }
+bindgen = "0.66.*"
+cc = { version = "1.0.*", features = ["parallel"] }
