@@ -44,7 +44,7 @@ fn main() {
 
     bindgen::Builder::default()
         .header("argon2_bindings.h")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
         .expect("Unable to generate bindings for argon2 library");
 
@@ -52,7 +52,7 @@ fn main() {
 
     let bindings = bindgen::Builder::default()
         .header("argon2_bindings.h")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
         .expect("Unable to generate bindings for argon2 library");
 
