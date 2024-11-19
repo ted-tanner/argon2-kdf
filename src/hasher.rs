@@ -393,6 +393,7 @@ pub struct Hash {
     hash: Vec<u8>,
 }
 
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for Hash {
     /// Generates a hash string. Aside from the hash, the hash string also includes the salt
     /// and paramters used to generate the hash, making it easy to store in a database or a
