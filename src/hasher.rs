@@ -381,16 +381,21 @@ impl<'a> Hasher<'a> {
     }
 }
 
-/// A container for an Argon2 hash, the corresponding salt, and the parameters used for
-/// hashing
+/// A container for an Argon2 hash, the corresponding salt, and the parameters used for hashing
 #[derive(Clone, Debug)]
 pub struct Hash {
-    alg: Algorithm,
-    mem_cost_kib: u32,
-    iterations: u32,
-    threads: u32,
-    salt: Vec<u8>,
-    hash: Vec<u8>,
+    /// The algorithm used for hashing.
+    pub alg: Algorithm,
+    /// The memory cost in kibibytes.
+    pub mem_cost_kib: u32,
+    /// The number of iterations.
+    pub iterations: u32,
+    /// The number of threads.
+    pub threads: u32,
+    /// The salt used to generate the hash.
+    pub salt: Vec<u8>,
+    /// The hash itself.
+    pub hash: Vec<u8>,
 }
 
 #[allow(clippy::to_string_trait_impl)]
