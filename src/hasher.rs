@@ -384,17 +384,17 @@ impl<'a> Hasher<'a> {
 /// A container for an Argon2 hash, the corresponding salt, and the parameters used for hashing
 #[derive(Clone, Debug)]
 pub struct Hash {
-    /// The algorithm used for hashing.
+    /// The algorithm used for hashing (Argon2d, Argon2i, or Argon2id)
     pub alg: Algorithm,
-    /// The memory cost in kibibytes.
+    /// The memory cost in kibibytes
     pub mem_cost_kib: u32,
-    /// The number of iterations.
+    /// The number of iterations used for hashing
     pub iterations: u32,
-    /// The number of threads.
+    /// The number of threads used for hashing
     pub threads: u32,
-    /// The salt used to generate the hash.
+    /// The salt used to generate the hash
     pub salt: Vec<u8>,
-    /// The hash itself.
+    /// The hash in bytes
     pub hash: Vec<u8>,
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "argon2-kdf"
-version = "1.5.3"
+version = "1.5.4"
 edition = "2021"
 readme = "Readme.md"
 license = "MIT"
