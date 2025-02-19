@@ -348,7 +348,7 @@ impl<'a> Hasher<'a> {
             m_cost: self.mem_cost_kib,
             lanes: self.threads,
             threads: self.threads,
-            version: Argon2_version_ARGON2_VERSION_13,
+            version: Argon2_version_ARGON2_VERSION_13 as u32,
             allocate_cbk: None,
             free_cbk: None,
             flags: 0,
@@ -443,7 +443,7 @@ impl FromStr for Hash {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokenized_hash = TokenizedHash::from_str(s)?;
 
-        if tokenized_hash.v != Argon2_version_ARGON2_VERSION_13 {
+        if tokenized_hash.v != Argon2_version_ARGON2_VERSION_13 as u32 {
             return Err(Argon2Error::InvalidHash("Hash version is unsupported"));
         }
 
