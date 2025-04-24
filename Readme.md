@@ -23,7 +23,7 @@ To use argon2-kdf, add the following to your Cargo.toml:
 
 ```toml
 [dependencies]
-argon2-kdf = "1.5.4"
+argon2-kdf = "1.6.1"
 ```
 
 To pass build flags to the C compiler used to build the Argon2 library, you may add a semicolon-delimited list of flags to the `ARGON2_KDF_C_COMPILER_FLAGS` environment variable. For example, if you wish to disable the AVX optimizations that are on by default, you can do so with the following command: `ARGON2_KDF_C_COMPILER_FLAGS="-mno-avx512f;-mno-avx2" cargo build`.
@@ -73,6 +73,26 @@ let hash_string = "$argon2id$v=19$m=128,t=2,p=1$VnZ3ZFNhZkc$djHLRc+4K/DqQL0f8DMA
 
 let hash = Hash::from_str(hash_string).unwrap();
 assert!(hash.verify(password));
+```
+
+Verify a hash from bytes:
+
+```rust
+use argon2_kdf::{Algorithm, Hash};
+use std::str::FromStr;
+
+let salt = b"testsalt";
+let hash_bytes = [155, 147, 76, 205, 220, 49, 114, 102];
+
+let hash = Hash::from_parts(
+    &hash_bytes,
+    salt,
+    Algorithm::Argon2id,
+    16,
+    1,
+    1,
+);
+assert!(hash.verify(b"password"));
 ```
 
 Generate a hash string:
