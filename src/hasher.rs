@@ -4,10 +4,10 @@ use crate::lexer::TokenizedHash;
 use base64::engine::general_purpose::STANDARD_NO_PAD as b64_stdnopad;
 use base64::Engine;
 use rand::{rngs::OsRng, Fill};
-use std::default::Default;
 use std::ffi::CStr;
 use std::mem::MaybeUninit;
 use std::str::FromStr;
+use std::{borrow::Cow, default::Default};
 
 use crate::bindings::{
     argon2_error_message, argon2d_ctx, argon2i_ctx, argon2id_ctx, Argon2_Context,
@@ -375,31 +375,25 @@ impl<'a> Hasher<'a> {
             mem_cost_kib: self.mem_cost_kib,
             iterations: self.iterations,
             threads: self.threads,
-            salt,
-            hash: hash_buffer,
+            salt: Cow::Owned(salt),
+            hash: Cow::Owned(hash_buffer),
         })
     }
 }
 
 /// A container for an Argon2 hash, the corresponding salt, and the parameters used for hashing
 #[derive(Clone, Debug)]
-pub struct Hash {
-    /// The algorithm used for hashing (Argon2d, Argon2i, or Argon2id)
-    pub alg: Algorithm,
-    /// The memory cost in kibibytes
-    pub mem_cost_kib: u32,
-    /// The number of iterations used for hashing
-    pub iterations: u32,
-    /// The number of threads used for hashing
-    pub threads: u32,
-    /// The salt used to generate the hash
-    pub salt: Vec<u8>,
-    /// The hash in bytes
-    pub hash: Vec<u8>,
+pub struct Hash<'a> {
+    alg: Algorithm,
+    mem_cost_kib: u32,
+    iterations: u32,
+    threads: u32,
+    salt: Cow<'a, [u8]>,
+    hash: Cow<'a, [u8]>,
 }
 
 #[allow(clippy::to_string_trait_impl)]
-impl ToString for Hash {
+impl ToString for Hash<'_> {
     /// Generates a hash string. Aside from the hash, the hash string also includes the salt
     /// and paramters used to generate the hash, making it easy to store in a database or a
     /// cache. This string is formatted to a standard shared by most implementations of argon2,
@@ -409,8 +403,8 @@ impl ToString for Hash {
     ///
     /// _$argon2id$v=19$m=62500,t=18,p=2$AQIDBAUGBwg$ypJ3pKxN4aWGkwMv0TOb08OIzwrfK1SZWy64vyTLKo8_
     fn to_string(&self) -> String {
-        let b64_salt = b64_stdnopad.encode(&self.salt);
-        let b64_hash = b64_stdnopad.encode(&self.hash);
+        let b64_salt = b64_stdnopad.encode(self.salt.as_ref());
+        let b64_hash = b64_stdnopad.encode(self.hash.as_ref());
 
         let alg = match self.alg {
             Algorithm::Argon2d => "d",
@@ -431,7 +425,7 @@ impl ToString for Hash {
     }
 }
 
-impl FromStr for Hash {
+impl FromStr for Hash<'_> {
     type Err = Argon2Error;
 
     /// Deserializes a hash string into parts (e.g. the hash, the salt, parameters) that can
@@ -470,21 +464,40 @@ impl FromStr for Hash {
             mem_cost_kib: tokenized_hash.mem_cost_kib,
             iterations: tokenized_hash.iterations,
             threads: tokenized_hash.threads,
-            salt: decoded_salt,
-            hash: decoded_hash,
+            salt: Cow::Owned(decoded_salt),
+            hash: Cow::Owned(decoded_hash),
         })
     }
 }
 
-impl Hash {
+impl<'a> Hash<'a> {
+    /// Constructs a Hash from a slice of the hash and salt and the parameters used for hashing.
+    pub fn from_parts(
+        hash: &'a [u8],
+        salt: &'a [u8],
+        alg: Algorithm,
+        mem_cost_kib: u32,
+        iterations: u32,
+        threads: u32,
+    ) -> Self {
+        Self {
+            alg,
+            mem_cost_kib,
+            iterations,
+            threads,
+            salt: Cow::Borrowed(salt),
+            hash: Cow::Borrowed(hash),
+        }
+    }
+
     /// Returns a reference to a byte slice of the computed hash/key.
     pub fn as_bytes(&self) -> &[u8] {
-        &self.hash
+        self.hash.as_ref()
     }
 
     /// Returns a reference to a byte slice of the salt used to generate the hash.
     pub fn salt_bytes(&self) -> &[u8] {
-        &self.salt
+        self.salt.as_ref()
     }
 
     /// Returns the algorithm used to generate the hash.
@@ -580,11 +593,13 @@ mod tests {
             mem_cost_kib: 128,
             iterations: 3,
             threads: 2,
-            salt: vec![1, 2, 3, 4, 5, 6, 7, 8],
-            hash: b64_stdnopad
-                .decode("ypJ3pKxN4aWGkwMv0TOb08OIzwrfK1SZWy64vyTLKo8")
-                .unwrap()
-                .to_vec(),
+            salt: Cow::Borrowed(&[1, 2, 3, 4, 5, 6, 7, 8]),
+            hash: Cow::Owned(
+                b64_stdnopad
+                    .decode("ypJ3pKxN4aWGkwMv0TOb08OIzwrfK1SZWy64vyTLKo8")
+                    .unwrap()
+                    .to_vec(),
+            ),
         };
 
         assert_eq!(
@@ -775,6 +790,8 @@ mod tests {
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
+        assert!(!Hash::from_str(&hash).unwrap().verify(auth_string));
+
         assert!(Hash::from_str(&hash)
             .unwrap()
             .verify_with_secret(auth_string, (&key).into()));
@@ -794,6 +811,10 @@ mod tests {
             .unwrap()
             .to_string();
 
+        assert!(!Hash::from_str(&hash)
+            .unwrap()
+            .verify_with_secret(auth_string, (&[0, 1, 2, 3]).into()));
+
         assert!(Hash::from_str(&hash).unwrap().verify(auth_string));
     }
 
@@ -812,6 +833,8 @@ mod tests {
             .secret((&key).into());
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
+
+        assert!(!Hash::from_str(&hash).unwrap().verify(auth_string));
 
         assert!(Hash::from_str(&hash)
             .unwrap()
@@ -833,6 +856,8 @@ mod tests {
             .secret((&key).into());
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
+
+        assert!(!Hash::from_str(&hash).unwrap().verify(auth_string));
 
         assert!(Hash::from_str(&hash)
             .unwrap()
@@ -875,9 +900,13 @@ mod tests {
             .hash(auth_string)
             .unwrap();
 
-        assert_eq!(hash.salt, salt);
+        assert_eq!(hash.salt.as_ref(), salt);
 
         let hash_string = hash.to_string();
+
+        assert!(!Hash::from_str(&hash_string)
+            .unwrap()
+            .verify_with_secret(auth_string, (&[0, 1, 2, 3]).into()));
 
         assert!(Hash::from_str(&hash_string).unwrap().verify(auth_string));
     }
@@ -896,6 +925,8 @@ mod tests {
             .secret((&key).into());
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
+
+        assert!(!Hash::from_str(&hash).unwrap().verify(auth_string));
 
         assert!(Hash::from_str(&hash)
             .unwrap()
@@ -917,9 +948,9 @@ mod tests {
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
-        assert!(Hash::from_str(&hash)
+        assert!(!Hash::from_str(&hash)
             .unwrap()
-            .verify_with_secret(auth_string, (&key).into()));
+            .verify_with_secret(b"@Pa$$20rd-Tests", (&key).into()));
     }
 
     #[test]
@@ -937,8 +968,29 @@ mod tests {
 
         let hash = hash_builder.hash(auth_string).unwrap().to_string();
 
-        assert!(Hash::from_str(&hash)
+        assert!(!Hash::from_str(&hash)
             .unwrap()
-            .verify_with_secret(auth_string, (&key).into()));
+            .verify_with_secret(auth_string, (&[0u8; 33]).into()));
+    }
+
+    #[test]
+    fn test_from_parts() {
+        let hash = Hash::from_parts(
+            &[155, 147, 76, 205, 220, 49, 114, 102],
+            b"testsalt",
+            Algorithm::Argon2id,
+            16,
+            1,
+            1,
+        );
+
+        assert!(matches!(hash.algorithm(), Algorithm::Argon2id));
+        assert_eq!(hash.mem_cost_kib, 16);
+        assert_eq!(hash.iterations, 1);
+        assert_eq!(hash.threads, 1);
+        assert_eq!(hash.salt.as_ref(), b"testsalt");
+        assert_eq!(hash.hash.as_ref(), &[155, 147, 76, 205, 220, 49, 114, 102]);
+
+        assert!(hash.verify(b"password"));
     }
 }

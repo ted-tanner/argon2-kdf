@@ -78,6 +78,26 @@
 //! assert!(hash.verify(password));
 //! ```
 //!
+//! Verify a hash from bytes:
+//!
+//! ```rust
+//! use argon2_kdf::{Algorithm, Hash};
+//! use std::str::FromStr;
+//!
+//! let salt = b"testsalt";
+//! let hash_bytes = [155, 147, 76, 205, 220, 49, 114, 102];
+//!
+//! let hash = Hash::from_parts(
+//!     &hash_bytes,
+//!     salt,
+//!     Algorithm::Argon2id,
+//!     16,
+//!     1,
+//!     1,
+//! );
+//! assert!(hash.verify(b"password"));
+//! ```
+//!
 //! Generate a hash string:
 //!
 //! ```rust
