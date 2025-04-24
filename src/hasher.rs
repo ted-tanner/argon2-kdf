@@ -3,7 +3,8 @@ use crate::lexer::TokenizedHash;
 
 use base64::engine::general_purpose::STANDARD_NO_PAD as b64_stdnopad;
 use base64::Engine;
-use rand::{rngs::OsRng, Fill};
+use rand::rngs::OsRng;
+use rand::TryRngCore;
 use std::ffi::CStr;
 use std::mem::MaybeUninit;
 use std::str::FromStr;
@@ -278,8 +279,9 @@ impl<'a> Hasher<'a> {
         let mut hash_buffer = MaybeUninit::new(Vec::with_capacity(hash_len_usize));
         let mut hash_buffer = unsafe {
             (*hash_buffer.as_mut_ptr()).set_len(hash_len_usize);
-            (*hash_buffer.as_mut_ptr())
-                .try_fill(&mut OsRng)
+
+            OsRng
+                .try_fill_bytes(&mut *hash_buffer.as_mut_ptr())
                 .expect("Failed to fill buffer with random bytes");
 
             hash_buffer.assume_init()
@@ -307,8 +309,8 @@ impl<'a> Hasher<'a> {
             let mut rand_salt = MaybeUninit::new(Vec::with_capacity(salt_len_usize));
             unsafe {
                 (*rand_salt.as_mut_ptr()).set_len(salt_len_usize);
-                (*rand_salt.as_mut_ptr())
-                    .try_fill(&mut OsRng)
+                OsRng
+                    .try_fill_bytes(&mut *rand_salt.as_mut_ptr())
                     .expect("Failed to fill buffer with random bytes");
 
                 rand_salt.assume_init()
