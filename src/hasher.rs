@@ -492,6 +492,26 @@ impl<'a> Hash<'a> {
         }
     }
 
+    /// Constructs a Hash from a `Vec<u8>` of the hash and salt and the parameters used for hashing,
+    /// taking ownership of the hash and salt `Vec`s.
+    pub fn from_parts_owned(
+        hash: Vec<u8>,
+        salt: Vec<u8>,
+        alg: Algorithm,
+        mem_cost_kib: u32,
+        iterations: u32,
+        threads: u32,
+    ) -> Self {
+        Self {
+            alg,
+            mem_cost_kib,
+            iterations,
+            threads,
+            salt: Cow::Owned(salt),
+            hash: Cow::Owned(hash),
+        }
+    }
+
     /// Returns a reference to a byte slice of the computed hash/key.
     pub fn as_bytes(&self) -> &[u8] {
         self.hash.as_ref()
@@ -980,6 +1000,27 @@ mod tests {
         let hash = Hash::from_parts(
             &[155, 147, 76, 205, 220, 49, 114, 102],
             b"testsalt",
+            Algorithm::Argon2id,
+            16,
+            1,
+            1,
+        );
+
+        assert!(matches!(hash.algorithm(), Algorithm::Argon2id));
+        assert_eq!(hash.mem_cost_kib, 16);
+        assert_eq!(hash.iterations, 1);
+        assert_eq!(hash.threads, 1);
+        assert_eq!(hash.salt.as_ref(), b"testsalt");
+        assert_eq!(hash.hash.as_ref(), &[155, 147, 76, 205, 220, 49, 114, 102]);
+
+        assert!(hash.verify(b"password"));
+    }
+
+    #[test]
+    fn test_from_parts_owned() {
+        let hash = Hash::from_parts_owned(
+            vec![155, 147, 76, 205, 220, 49, 114, 102],
+            Vec::from(b"testsalt"),
             Algorithm::Argon2id,
             16,
             1,

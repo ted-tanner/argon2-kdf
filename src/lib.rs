@@ -23,7 +23,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! argon2-kdf = "1.6.1"
+//! argon2-kdf = "1.6.2"
 //! ```
 //! To pass build flags to the C compiler used to build the Argon2 library, you may add a
 //! semicolon-delimited list of flags to the `ARGON2_KDF_C_COMPILER_FLAGS` environment variable.
@@ -82,7 +82,6 @@
 //!
 //! ```rust
 //! use argon2_kdf::{Algorithm, Hash};
-//! use std::str::FromStr;
 //!
 //! let salt = b"testsalt";
 //! let hash_bytes = [155, 147, 76, 205, 220, 49, 114, 102];
@@ -91,10 +90,11 @@
 //!     &hash_bytes,
 //!     salt,
 //!     Algorithm::Argon2id,
-//!     16,
-//!     1,
-//!     1,
+//!     16, // memory cost in kibibytes
+//!     1, // iterations
+//!     1, // parallelism
 //! );
+//!
 //! assert!(hash.verify(b"password"));
 //! ```
 //!
