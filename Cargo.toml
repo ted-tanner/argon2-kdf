@@ -1,6 +1,7 @@
 [package]
 name = "argon2-kdf"
 version = "1.6.1"
+rust-version = "1.82.0"
 edition = "2021"
 readme = "Readme.md"
 license = "MIT"
