@@ -21,7 +21,6 @@ fn main() {
     let mut builder = cc::Build::new();
 
     let mut build = builder
-        .static_flag(true)
         .files(src.iter())
         .opt_level(3) // Optimize even in debug mode to prevent excessive slowness
         .include("phc-winner-argon2-20190702/include")

@@ -270,7 +270,7 @@ impl<'a> Hasher<'a> {
     /// This is an expensive operation. For some appliations, it might make sense to move this
     /// operation to a separate thread using `std::thread` or something like
     /// [the Rayon crate](https://docs.rs/rayon/latest/rayon/) to avoid blocking main threads.
-    pub fn hash(self, password: &[u8]) -> Result<Hash, Argon2Error> {
+    pub fn hash(self, password: &[u8]) -> Result<Hash<'_>, Argon2Error> {
         let hash_len_usize = match usize::try_from(self.hash_len) {
             Ok(l) => l,
             Err(_) => return Err(Argon2Error::InvalidParameter("Hash length is too big")),

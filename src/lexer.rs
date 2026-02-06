@@ -67,7 +67,7 @@ impl FromStr for TokenizedHash {
 
         let mut alg = Algorithm::Argon2id;
 
-        for (i, c) in s.chars().enumerate() {
+        for (i, c) in s.char_indices() {
             match state {
                 HashStates::Start => {
                     state = match c {
