@@ -11,6 +11,9 @@ pub enum Argon2Error {
     /// normally occurs when a hash is improperly formatted.
     InvalidHash(&'static str),
 
+    /// Indicates that the operating system's secure random source failed.
+    RandomSourceUnavailable,
+
     /// An error that is unhandled by the crate, but is recognized by the C argon2 library
     CLibError(String),
 }
@@ -25,6 +28,9 @@ impl fmt::Display for Argon2Error {
                 write!(f, "Argon2Error: Invalid parameter: {}", msg)
             }
             Argon2Error::InvalidHash(msg) => write!(f, "Argon2Error: Invalid hash: {}", msg),
+            Argon2Error::RandomSourceUnavailable => {
+                write!(f, "Argon2Error: Secure random source unavailable")
+            }
             Argon2Error::CLibError(msg) => {
                 write!(f, "Argon2Error: Error from C library: {}", msg)
             }
