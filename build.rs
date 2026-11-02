@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 fn main() {
-    let supports_simd = cfg!(target_arch = "x86_64");
-
-    let simd_src_file = if supports_simd {
+    let target_arch =
+        std::env::var("CARGO_CFG_TARGET_ARCH").expect("Cargo must provide the target architecture");
+    let simd_src_file = if target_arch == "x86_64" {
         "phc-winner-argon2-20190702/src/opt.c"
     } else {
         "phc-winner-argon2-20190702/src/ref.c"
@@ -28,14 +28,11 @@ fn main() {
         .flag("-std=c89")
         .flag("-pthread");
 
+    println!("cargo:rerun-if-env-changed=ARGON2_KDF_C_COMPILER_FLAGS");
     if let Ok(compiler_flags) = std::env::var("ARGON2_KDF_C_COMPILER_FLAGS") {
         for flag in compiler_flags.split(';') {
             build = build.flag(flag);
         }
-    }
-
-    if supports_simd {
-        build.flag_if_supported("-march=native");
     }
 
     build.compile("argon2");

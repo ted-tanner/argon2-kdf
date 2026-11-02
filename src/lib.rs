@@ -23,13 +23,13 @@
 //!
 //! ```toml
 //! [dependencies]
-//! argon2-kdf = "1.7.2"
+//! argon2-kdf = "1.7.3"
 //! ```
 //! To pass build flags to the C compiler used to build the Argon2 library, you may add a
 //! semicolon-delimited list of flags to the `ARGON2_KDF_C_COMPILER_FLAGS` environment variable.
-//! For example, if you wish to disable the AVX optimizations that are on by default, you can
-//! build using the following command:
-//! `ARGON2_KDF_C_COMPILER_FLAGS="-mno-avx512f;-mno-avx2" cargo build`.
+//! Native CPU optimization is opt-in: use
+//! `ARGON2_KDF_C_COMPILER_FLAGS="-march=native" cargo build` to target the build machine's CPU.
+//! These builds may require that CPU's instruction sets at runtime.
 //!
 //! # Examples
 //!
